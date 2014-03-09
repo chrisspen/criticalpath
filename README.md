@@ -1,9 +1,17 @@
 CriticalPath
 ============
 
-Calculates the [critical path](http://en.wikipedia.org/wiki/Critical_path_method) through a network of tasks.
+Calculates the
+[critical path](http://en.wikipedia.org/wiki/Critical_path_method)
+through a network of tasks.
 
 Assumes the given graph is acyclic (has no loops).
+
+A task network is composed of nodes, but it's also organized within
+a parent node. This allows my node/task model to support recursive nesting
+of tasks. e.g. An overall "project" node containing multiple tasks can be
+treated as a single task in itself, and therefore included in more abstract
+task groupings.
 
 Installation
 ------------
