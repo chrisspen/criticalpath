@@ -9,7 +9,7 @@ http://en.wikipedia.org/wiki/Critical_path_method
 import sys
 import unittest
 
-VERSION = (0, 1, 0)
+VERSION = (0, 1, 1)
 __version__ = '.'.join(map(str, VERSION))
 
 class Node(object):
@@ -255,6 +255,8 @@ class Node(object):
         """
         Updates timing calculations for all children nodes.
         """
+        assert self.is_acyclic(), 'Network must not contain any cycles.'
+        
         for node in list(self.forward_pending.intersection(self.first_nodes)):
             node.es = self.lag + node.lag
             node.update_forward()
@@ -347,7 +349,63 @@ class Node(object):
             drag=str(self.drag).ljust(w-5),
         ))
 
+    def is_acyclic(self):
+        """
+        Returns true if the network has no cycle anywhere within it
+        by performing a depth-first search of all nodes.
+        Returns false otherwise.
+        A proper task network should be acyclic, having an explicit
+        "start" and "end" node with no link back from end to start.
+        """
+        q = [(_, set([_])) for _ in self.nodes]
+        while q:
+            node, priors = q.pop(0)
+            for next_node in node.to_nodes:
+                if next_node in priors:
+                    return False
+                next_priors = priors.copy()
+                next_priors.add(next_node)
+                q.append((next_node, next_priors))
+        return True
+
 class Test(unittest.TestCase):
+    
+    def test_cycles(self):
+        
+        p = Node('project')
+        
+        a = p.add(Node('A', duration=3))
+        b = p.add(Node('B', duration=3, lag=0))
+        c = p.add(Node('C', duration=4, lag=0))
+        d = p.add(Node('D', duration=6, lag=0))
+        e = p.add(Node('E', duration=5, lag=0))
+        
+        p.link(a, b)
+        p.link(a, c)
+        p.link(a, d)
+        p.link(b, e)
+        p.link(c, e)
+        p.link(d, e)
+        
+        self.assertEqual(p.is_acyclic(), True)
+        
+        p = Node('project')
+        
+        a = p.add(Node('A', duration=3))
+        b = p.add(Node('B', duration=3, lag=0))
+        c = p.add(Node('C', duration=4, lag=0))
+        d = p.add(Node('D', duration=6, lag=0))
+        e = p.add(Node('E', duration=5, lag=0))
+        
+        p.link(a, b)
+        p.link(a, c)
+        p.link(a, d)
+        p.link(b, e)
+        p.link(c, e)
+        p.link(d, e)
+        p.link(e, a) # links back!
+        
+        self.assertEqual(p.is_acyclic(), False)
     
     def test_project(self):
         
