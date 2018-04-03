@@ -326,7 +326,7 @@ class Node(object):
 
     def print_times(self):
         w = 7
-        print """
+        print("""
 +{border}+
 |{blank} DUR={dur} {blank}|
 +{border}+
@@ -347,7 +347,7 @@ class Node(object):
             ls=str(self.ls).ljust(w-3),
             lf=str(self.lf).ljust(w-3),
             drag=str(self.drag).ljust(w-5),
-        ))
+        )))
 
     def is_acyclic(self):
         """
