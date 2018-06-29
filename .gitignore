@@ -24,6 +24,7 @@ var
 sdist
 develop-eggs
 .installed.cfg
+.env
 lib
 lib64
 
@@ -31,3 +32,6 @@ lib64
 /.project
 /.pydevproject
 /.settings
+
+*.out
+*.geany

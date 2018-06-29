@@ -6,84 +6,86 @@ A simple critical path method implementation.
 
 http://en.wikipedia.org/wiki/Critical_path_method
 """
-import sys
+from __future__ import print_function
+
+# import sys
 import unittest
 
-VERSION = (0, 1, 1)
+VERSION = (0, 1, 2)
 __version__ = '.'.join(map(str, VERSION))
 
 class Node(object):
     """
     Represents a task in a action precedence network.
-    
+
     Nodes can be linked together or group child nodes.
     """
-    
+
     def __init__(self, name, duration=None, lag=0):
-        
+
         self.parent = None
-        
+
         # A unique identifier of this task.
         self.name = name
-        
+
         self.description = None
-        
+
         # How long this task takes to complete.
         self._duration = duration
-        
+
         # The amount of time the task must wait after the preceeding task
         # has finished before beginning.
         self._lag = lag #TODO
-        
+
         self.drag = None #TODO
-        
+
         # Earliest start time.
         self._es = None
-        
+
         # Earliest finish time.
         self._ef = None
-        
+
         # Latest start time.
         self._ls = None
-        
+
         # Latest finish time.
         self._lf = None
-        
+
         # The amount time that the activity can be delayed without
         # changing the start of any other activity.
         self._free_float = None #TODO
-        
+
         # The amount of time that the activity can be delayed without
         # increasing the overall project's duration.
         self._total_float = None #TODO
-        
+
         self.nodes = []#set()
         self.name_to_node = {}
         self.to_nodes = set()
         self.incoming_nodes = set()
-        
+
         self.forward_pending = set()
         self.backward_pending = []
-        
+
         self._critical_path = None
-        
+
         self.exit_node = None
-    
+
     def lookup_node(self, name):
         return self.name_to_node[name]
-    
+
     @property
     def lag(self):
         return self._lag
-    
+
     @lag.setter
     def lag(self, v):
         self._lag = v
-    
+
     @property
     def duration(self):
         return self._duration
-    
+
     @duration.setter
     def duration(self, v):
         """
@@ -91,58 +93,57 @@ class Node(object):
         the critical path of all child nodes.
         """
         self._duration = v
-        
+
     @property
     def es(self):
         return self._es
-    
+
     @es.setter
     def es(self, v):
         self._es = v
         if self.parent:
             self.parent.forward_pending.add(self)
-        
+
     @property
     def ef(self):
         return self._ef
-    
+
     @ef.setter
     def ef(self, v):
         self._ef = v
-    
+
     @property
     def ls(self):
         return self._ls
-    
+
     @ls.setter
     def ls(self, v):
         self._ls = v
-    
+
     @property
     def lf(self):
         return self._lf
-    
+
     @lf.setter
     def lf(self, v):
         self._lf = v
-    
+
     def __repr__(self):
         return str(self.name)
-        
+
     def __hash__(self):
         return hash(self.name)
-        
+
     def __cmp__(self, other):
         if not isinstance(other, type(self)):
-            return NotImplmented
-        return cmp(self.name, other.name)
-    
+            return NotImplmented # pylint: disable=undefined-variable
+        return cmp(self.name, other.name) # pylint: disable=undefined-variable
+
     def add(self, node):
         """
         Includes the given node as a child node.
         """
-        assert isinstance(node, Node), \
-            'Only Node instances can be added, not %s.' % (type(node).__name__,)
+        assert isinstance(node, Node), 'Only Node instances can be added, not %s.' % (type(node).__name__,)
         assert node.duration is not None, 'Duration must be specified.'
         #self.nodes.add(node)
         self.nodes.append(node)
@@ -151,7 +152,7 @@ class Node(object):
         self.forward_pending.add(node)
         self._critical_path = None
         return node
-    
+
     def link(self, from_node, to_node=None):
         """
         Links together two child nodes.
@@ -192,7 +193,7 @@ class Node(object):
     def update_forward(self):
         """
         Updates forward timing calculations for the current node.
-        
+
         Assumes the earliest start value has already been set.
         """
         changed = False
@@ -202,7 +203,7 @@ class Node(object):
 #            print 'dur:',self.duration
             self.ef = self.es + self.duration
             changed = True
-        
+
         if changed:
             for to_node in self.to_nodes:
                 if to_node == self:
@@ -214,10 +215,10 @@ class Node(object):
                     to_node.es = new_es
                 else:
                     to_node.es = max(to_node.es, new_es)
-                    
+
                 if self.parent:
                     self.parent.forward_pending.add(to_node)
-            
+
             if self.parent:
                 self.parent.backward_pending.append(self)
 
@@ -256,12 +257,12 @@ class Node(object):
         Updates timing calculations for all children nodes.
         """
         assert self.is_acyclic(), 'Network must not contain any cycles.'
-        
+
         for node in list(self.forward_pending.intersection(self.first_nodes)):
             node.es = self.lag + node.lag
             node.update_forward()
             self.forward_pending.remove(node)
-        
+
         i = 0
         forward_priors = set()
         while self.forward_pending:
@@ -277,7 +278,7 @@ class Node(object):
                 #forward_priors.add(node)
                 node.update_forward()
 #        print
-        
+
         i = 0
         backward_priors = set()
         while self.backward_pending:
@@ -290,14 +291,14 @@ class Node(object):
             #backward_priors.add(node)
             node.update_backward()
 #        print
-            
+
         self._critical_path = duration, path, priors = self.get_critical_path(as_item=True)
         self.duration = duration
         self.es = path[0].es
         self.ls = path[0].ls
         self.ef = path[-1].ef
         self.lf = path[-1].lf
-#            
+#
     def get_critical_path(self, as_item=False):
         """
         Finds the longest path in among the child nodes.
@@ -326,7 +327,7 @@ class Node(object):
 
     def print_times(self):
         w = 7
-        print """
+        print("""
 +{border}+
 |{blank} DUR={dur} {blank}|
 +{border}+
@@ -336,7 +337,7 @@ class Node(object):
 +{border}+
 |{blank}DRAG={drag}{blank}|
 +{border}+
-""".format(**dict(
+""".format(
             blank=' '*w,
             segment='-'*w,
             border='-'*(w*3 + 2),
@@ -369,34 +370,34 @@ class Node(object):
         return True
 
 class Test(unittest.TestCase):
-    
+
     def test_cycles(self):
-        
+
         p = Node('project')
-        
+
         a = p.add(Node('A', duration=3))
         b = p.add(Node('B', duration=3, lag=0))
         c = p.add(Node('C', duration=4, lag=0))
         d = p.add(Node('D', duration=6, lag=0))
         e = p.add(Node('E', duration=5, lag=0))
-        
+
         p.link(a, b)
         p.link(a, c)
         p.link(a, d)
         p.link(b, e)
         p.link(c, e)
         p.link(d, e)
-        
+
         self.assertEqual(p.is_acyclic(), True)
-        
+
         p = Node('project')
-        
+
         a = p.add(Node('A', duration=3))
         b = p.add(Node('B', duration=3, lag=0))
         c = p.add(Node('C', duration=4, lag=0))
         d = p.add(Node('D', duration=6, lag=0))
         e = p.add(Node('E', duration=5, lag=0))
-        
+
         p.link(a, b)
         p.link(a, c)
         p.link(a, d)
@@ -404,31 +405,31 @@ class Test(unittest.TestCase):
         p.link(c, e)
         p.link(d, e)
         p.link(e, a) # links back!
-        
+
         self.assertEqual(p.is_acyclic(), False)
-    
+
     def test_project(self):
-        
+
         p = Node('project')
-        
+
         a = p.add(Node('A', duration=3))
         b = p.add(Node('B', duration=3, lag=0))
         c = p.add(Node('C', duration=4, lag=0))
         d = p.add(Node('D', duration=6, lag=0))
         e = p.add(Node('E', duration=5, lag=0))
-        
+
         p.link(a, b)
         p.link(a, c)
         p.link(a, d)
         p.link(b, e)
         p.link(c, e)
         p.link(d, e)
-        
+
         p.update_all()
-        
+
 #        for node in sorted(p.nodes, key=lambda n: n.name):
 #            node.print_times()
-            
+
         self.assertEqual(a.es, 0)
         self.assertEqual(a.ef, 3)
         self.assertEqual(a.ls, 0)
@@ -449,7 +450,7 @@ class Test(unittest.TestCase):
         self.assertEqual(e.ef, 14)
         self.assertEqual(e.ls, 9)
         self.assertEqual(e.lf, 14)
-        
+
         critical_path = p.get_critical_path()
         #print critical_path
         self.assertEqual(critical_path, [a, d, e])
@@ -461,4 +462,3 @@ class Test(unittest.TestCase):
 
 if __name__ == '__main__':
     unittest.main()
-    
