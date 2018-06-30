@@ -5,20 +5,78 @@
 A simple critical path method implementation.
 
 http://en.wikipedia.org/wiki/Critical_path_method
+
+To run a unittest:
+
+    python criticalpath.py Test.test_model
+
 """
 from __future__ import print_function
 
-# import sys
-import unittest
+import sys
 
-VERSION = (0, 1, 2)
-__version__ = '.'.join(map(str, VERSION))
+PY3 = sys.version_info[0] >= 3
+if PY3:
+    def cmp(a, b):
+        return (a > b) - (a < b)
+    # mixin class for Python3 supporting __cmp__
+    class PY3__cmp__:
+        def __eq__(self, other):
+            return self.__cmp__(other) == 0
+        def __ne__(self, other):
+            return self.__cmp__(other) != 0
+        def __gt__(self, other):
+            return self.__cmp__(other) > 0
+        def __lt__(self, other):
+            return self.__cmp__(other) < 0
+        def __ge__(self, other):
+            return self.__cmp__(other) >= 0
+        def __le__(self, other):
+            return self.__cmp__(other) <= 0
+else:
+    class PY3__cmp__:
+        pass
+
+
+# https://codereview.stackexchange.com/a/86067
+def cyclic(graph):
+    """
+    Return True if the directed graph has a cycle.
+    The graph must be represented as a dictionary mapping vertices to
+    iterables of neighbouring vertices. For example:
+
+    >>> cyclic({1: (2,), 2: (3,), 3: (1,)})
+    True
+    >>> cyclic({1: (2,), 2: (3,), 3: (4,)})
+    False
+
+    """
+    visited = set()
+    path = [object()]
+    path_set = set(path)
+    stack = [iter(graph)]
+    i = 0
+    while stack:
+        for v in stack[-1]:
+            if v in path_set:
+                return True
+            elif v not in visited:
+                visited.add(v)
+                path.append(v)
+                path_set.add(v)
+                stack.append(iter(graph.get(v, ())))
+                break
+        else:
+            path_set.remove(path.pop())
+            stack.pop()
+    return False
+
 
 class Node(object):
     """
     Represents a task in a action precedence network.
 
-    Nodes can be linked together or group child nodes.
+    Nodes can be linked together or grouped under a parent node as child nodes.
     """
 
     def __init__(self, name, duration=None, lag=0):
@@ -73,6 +131,14 @@ class Node(object):
 
     def lookup_node(self, name):
         return self.name_to_node[name]
+
+    def get_or_create_node(self, name, **kwargs):
+        try:
+            return self.lookup_node(name=name)
+        except KeyError:
+            n = Node(name=name, **kwargs)
+            self.add(n)
+            return n
 
     @property
     def lag(self):
@@ -134,10 +200,18 @@ class Node(object):
     def __hash__(self):
         return hash(self.name)
 
+    def __eq__(self, other):
+        if not isinstance(other, type(self)):
+            return False
+        return self.name == other.name
+
+    def __ne__(self, other):
+        return (not self.__eq__(other))
+
     def __cmp__(self, other):
         if not isinstance(other, type(self)):
-            return NotImplmented # pylint: disable=undefined-variable
-        return cmp(self.name, other.name) # pylint: disable=undefined-variable
+            return NotImplemented
+        return cmp(self.name, other.name)
 
     def add(self, node):
         """
@@ -145,6 +219,8 @@ class Node(object):
         """
         assert isinstance(node, Node), 'Only Node instances can be added, not %s.' % (type(node).__name__,)
         assert node.duration is not None, 'Duration must be specified.'
+        if node in self.nodes:
+            return
         #self.nodes.add(node)
         self.nodes.append(node)
         self.name_to_node[node.name] = node
@@ -155,7 +231,7 @@ class Node(object):
 
     def link(self, from_node, to_node=None):
         """
-        Links together two child nodes.
+        Links together two child nodes in a directed graph.
         """
         #print 'from_node:',from_node
         if not isinstance(from_node, Node):
@@ -164,6 +240,8 @@ class Node(object):
         assert isinstance(from_node, Node)
         if to_node is not None:
             if not isinstance(to_node, Node):
+                # print('to_node:', to_node)
+                # print('self.name_to_node:', self.name_to_node)
                 to_node = self.name_to_node[to_node]
             assert isinstance(to_node, Node)
             from_node.to_nodes.add(to_node)
@@ -298,7 +376,7 @@ class Node(object):
         self.ls = path[0].ls
         self.ef = path[-1].ef
         self.lf = path[-1].lf
-#
+
     def get_critical_path(self, as_item=False):
         """
         Finds the longest path in among the child nodes.
@@ -313,7 +391,10 @@ class Node(object):
             if longest is None:
                 longest = item
             else:
-                longest = max(longest, item)
+                try:
+                    longest = max(longest, item)
+                except TypeError:
+                    longest = longest
             for to_node in path[-1].to_nodes:
                 if to_node in priors:
                     continue
@@ -350,115 +431,35 @@ class Node(object):
             drag=str(self.drag).ljust(w-5),
         ))
 
+    # def is_acyclic1(self):
+        # """
+        # Returns true if the network has no cycle anywhere within it
+        # by performing a depth-first search of all nodes.
+        # Returns false otherwise.
+        # A proper task network should be acyclic, having an explicit
+        # "start" and "end" node with no link back from end to start.
+        # """
+        # q = [(_, set([_])) for _ in self.nodes]
+        # i = 0
+        # while q:
+            # node, priors = q.pop(0)
+            # # i += 1
+            # # sys.stdout.write('\ri: %i' % i)
+            # # sys.stdout.flush()
+            # for next_node in node.to_nodes:
+                # if next_node in priors:
+                    # print("Next node already in prior nodes:")
+                    # print(next_node.name)
+                    # print("Priors:")
+                    # for prior in sorted(priors, key=lambda n: n.name):
+                        # print(prior.name)
+
+                    # return False
+                # next_priors = priors.copy()
+                # next_priors.add(next_node)
+                # q.append((next_node, next_priors))
+        # return True
+
     def is_acyclic(self):
-        """
-        Returns true if the network has no cycle anywhere within it
-        by performing a depth-first search of all nodes.
-        Returns false otherwise.
-        A proper task network should be acyclic, having an explicit
-        "start" and "end" node with no link back from end to start.
-        """
-        q = [(_, set([_])) for _ in self.nodes]
-        while q:
-            node, priors = q.pop(0)
-            for next_node in node.to_nodes:
-                if next_node in priors:
-                    return False
-                next_priors = priors.copy()
-                next_priors.add(next_node)
-                q.append((next_node, next_priors))
-        return True
-
-class Test(unittest.TestCase):
-
-    def test_cycles(self):
-
-        p = Node('project')
-
-        a = p.add(Node('A', duration=3))
-        b = p.add(Node('B', duration=3, lag=0))
-        c = p.add(Node('C', duration=4, lag=0))
-        d = p.add(Node('D', duration=6, lag=0))
-        e = p.add(Node('E', duration=5, lag=0))
-
-        p.link(a, b)
-        p.link(a, c)
-        p.link(a, d)
-        p.link(b, e)
-        p.link(c, e)
-        p.link(d, e)
-
-        self.assertEqual(p.is_acyclic(), True)
-
-        p = Node('project')
-
-        a = p.add(Node('A', duration=3))
-        b = p.add(Node('B', duration=3, lag=0))
-        c = p.add(Node('C', duration=4, lag=0))
-        d = p.add(Node('D', duration=6, lag=0))
-        e = p.add(Node('E', duration=5, lag=0))
-
-        p.link(a, b)
-        p.link(a, c)
-        p.link(a, d)
-        p.link(b, e)
-        p.link(c, e)
-        p.link(d, e)
-        p.link(e, a) # links back!
-
-        self.assertEqual(p.is_acyclic(), False)
-
-    def test_project(self):
-
-        p = Node('project')
-
-        a = p.add(Node('A', duration=3))
-        b = p.add(Node('B', duration=3, lag=0))
-        c = p.add(Node('C', duration=4, lag=0))
-        d = p.add(Node('D', duration=6, lag=0))
-        e = p.add(Node('E', duration=5, lag=0))
-
-        p.link(a, b)
-        p.link(a, c)
-        p.link(a, d)
-        p.link(b, e)
-        p.link(c, e)
-        p.link(d, e)
-
-        p.update_all()
-
-#        for node in sorted(p.nodes, key=lambda n: n.name):
-#            node.print_times()
-
-        self.assertEqual(a.es, 0)
-        self.assertEqual(a.ef, 3)
-        self.assertEqual(a.ls, 0)
-        self.assertEqual(a.lf, 3)
-        self.assertEqual(b.es, 3)
-        self.assertEqual(b.ef, 6)
-        self.assertEqual(b.ls, 6)
-        self.assertEqual(b.lf, 9)
-        self.assertEqual(c.es, 3)
-        self.assertEqual(c.ef, 7)
-        self.assertEqual(c.ls, 5)
-        self.assertEqual(c.lf, 9)
-        self.assertEqual(d.es, 3)
-        self.assertEqual(d.ef, 9)
-        self.assertEqual(d.ls, 3)
-        self.assertEqual(d.lf, 9)
-        self.assertEqual(e.es, 9)
-        self.assertEqual(e.ef, 14)
-        self.assertEqual(e.ls, 9)
-        self.assertEqual(e.lf, 14)
-
-        critical_path = p.get_critical_path()
-        #print critical_path
-        self.assertEqual(critical_path, [a, d, e])
-        self.assertEqual(p.duration, 14)
-        self.assertEqual(p.es, 0)
-        self.assertEqual(p.ef, 14)
-        self.assertEqual(p.ls, 0)
-        self.assertEqual(p.lf, 14)
-
-if __name__ == '__main__':
-    unittest.main()
+        g = dict((node.name, tuple(child.name for child in node.to_nodes))for node in self.nodes)
+        return not cyclic(g)

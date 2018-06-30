@@ -1,13 +1,18 @@
 #!/usr/bin/env python
 
-from setuptools import setup
+from setuptools import setup, find_packages
 
 import criticalpath
 
 setup(
     name="criticalpath",
     version=criticalpath.__version__,
-    py_modules=['criticalpath'],
+    packages=find_packages(),
+    package_data={
+        'criticalpath': [
+            'fixtures/*',
+        ],
+    },
     author="Chris Spencer",
     author_email="chrisspen@gmail.com",
     description="Calculates the critical path in a task network.",

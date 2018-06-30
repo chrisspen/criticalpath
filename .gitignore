@@ -35,3 +35,4 @@ lib64
 
 *.out
 *.geany
+.tox
