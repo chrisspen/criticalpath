@@ -1,6 +1,8 @@
 CriticalPath
 ============
 
+[![](https://img.shields.io/pypi/v/criticalpath.svg)](https://pypi.python.org/pypi/criticalpath) [![Build Status](https://img.shields.io/travis/chrisspen/criticalpath.svg?branch=master)](https://travis-ci.org/chrisspen/criticalpath)
+
 Calculates the
 [critical path](http://en.wikipedia.org/wiki/Critical_path_method)
 through a network of tasks.
