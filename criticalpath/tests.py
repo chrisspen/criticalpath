@@ -187,6 +187,7 @@ class Test(unittest.TestCase):
         critical_path = p.get_critical_path()
         print(critical_path)
 
+    @unittest.skip('Too intensive for Travis. Runs fine locally, but takes about 10 minutes to complete.')
     def test_model_big(self):
         """
         A very large graph that tests the CPU and memory efficiency of our cyclic checker.
