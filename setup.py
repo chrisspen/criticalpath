@@ -21,7 +21,7 @@ setup(
     author_email='chrisspen@gmail.com',
     description='Calculates the critical path in a task network.',
     long_description=long_description,
-    long_description_content_type='text/markdown'
+    long_description_content_type='text/markdown',
     license='LGPL',
     url='https://github.com/chrisspen/criticalpath',
     #https://pypi.python.org/pypi?%3Aaction=list_classifiers
