@@ -1,11 +1,15 @@
 #!/usr/bin/env python
 
+from os import path
 from setuptools import setup, find_packages
 
 import criticalpath
 
+with open(path.join(path.abspath(path.dirname(__file__)), 'README.md'), encoding='utf-8') as f:
+    long_description = f.read()
+
 setup(
-    name="criticalpath",
+    name='criticalpath',
     version=criticalpath.__version__,
     packages=find_packages(),
     package_data={
@@ -13,11 +17,13 @@ setup(
             'fixtures/*',
         ],
     },
-    author="Chris Spencer",
-    author_email="chrisspen@gmail.com",
-    description="Calculates the critical path in a task network.",
-    license="LGPL",
-    url="https://github.com/chrisspen/criticalpath",
+    author='Chris Spencer',
+    author_email='chrisspen@gmail.com',
+    description='Calculates the critical path in a task network.',
+    long_description=long_description,
+    long_description_content_type='text/markdown'
+    license='LGPL',
+    url='https://github.com/chrisspen/criticalpath',
     #https://pypi.python.org/pypi?%3Aaction=list_classifiers
     classifiers=[
         'Development Status :: 4 - Beta',
